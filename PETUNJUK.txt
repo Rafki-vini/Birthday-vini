@@ -1,0 +1,3 @@
+Masukkan foto ke folder ini dengan nama:
+foto1.jpg, foto2.jpg, foto3.jpg, foto4.jpg, dan bunga.png.
+Foto 1-4 tampil dalam grid: desktop satu baris, HP dua kolom.
