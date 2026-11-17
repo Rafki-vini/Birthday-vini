@@ -327,11 +327,125 @@ function finishConfession(message) {
   confessionChoices.hidden = true;
   confessionContinue.hidden = false;
 }
-confessionYes.addEventListener("click", () => finishConfession("Makasih sudah menerima perasaanku. Aku harap kita bisa saling menjaga dan mengenal lebih baik. ♡"));
-confessionLater.addEventListener("click", () => finishConfession("Nggak apa-apa, kamu boleh mengambil waktu untuk memikirkannya. Terima kasih sudah jujur. ♡"));
+// Kirim pilihan Vini ke Google Sheets, tanpa mengganggu alur popup.
+async function saveConfessionAnswer(answer) {
+  try {
+    await fetch(SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify({ answer }),
+      headers: { "Content-Type": "text/plain;charset=utf-8" }
+    });
+  } catch (error) {
+    console.error("Jawaban Vini belum berhasil dikirim:", error);
+  }
+}
+
+confessionYes.addEventListener("click", () => {
+  saveConfessionAnswer("Iya, aku mau!");
+  finishConfession("Makasih sudah menerima perasaanku. Aku harap kita bisa saling menjaga dan mengenal lebih baik. ♡");
+});
+confessionLater.addEventListener("click", () => {
+  saveConfessionAnswer("Aku mau pikir dulu");
+  finishConfession("Nggak apa-apa, kamu boleh mengambil waktu untuk memikirkannya. Terima kasih sudah jujur. ♡");
+});
 confessionNext.addEventListener("click", () => { hideModal(confessionModal); document.getElementById("slide-wish").checked = true; });
 closeConfession.addEventListener("click", () => hideModal(confessionModal));
 confessionModal.addEventListener("click", (event) => { if (event.target === confessionModal) hideModal(confessionModal); });
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") { hideGiftChoice(); hideModal(giftPromptModal); hideModal(giftNoModal); hideModal(giftOpenModal); hideModal(confessionModal); }
+});
+
+
+// Popup foto: semua gambar pada halaman potongan chat dapat diperbesar.
+const photoViewer = document.getElementById("photoViewer");
+const photoViewerImage = document.getElementById("photoViewerImage");
+const photoViewerCaption = document.getElementById("photoViewerCaption");
+const closePhotoViewer = document.getElementById("closePhotoViewer");
+document.querySelectorAll(".chat-memories-slide .chat-final-photo-open").forEach((photoButton) => {
+  photoButton.addEventListener("click", () => {
+    const image = photoButton.querySelector("img");
+    if (!image) return;
+    photoViewerImage.src = image.src;
+    photoViewerImage.alt = image.alt || "Foto kenangan";
+    // Popup halaman Conversation menampilkan foto saja, tanpa caption.
+    photoViewerCaption.textContent = "";
+    photoViewerCaption.hidden = true;
+    photoViewer.classList.add("is-open");
+    photoViewer.setAttribute("aria-hidden", "false");
+  });
+});
+function hidePhotoViewer() {
+  photoViewer.classList.remove("is-open");
+  photoViewer.setAttribute("aria-hidden", "true");
+  photoViewerImage.src = "";
+  photoViewerCaption.hidden = false;
+  photoViewerCaption.textContent = "A little memory ♡";
+}
+closePhotoViewer.addEventListener("click", hidePhotoViewer);
+photoViewer.addEventListener("click", (event) => {
+  if (event.target === photoViewer) hidePhotoViewer();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && photoViewer.classList.contains("is-open")) hidePhotoViewer();
+});
+
+// Impian Vini disimpan pada browser/perangkat yang sedang digunakan.
+const viniDreamInput = document.getElementById("viniDreamInput");
+const viniDreamStatus = document.getElementById("viniDreamStatus");
+const VINI_DREAM_KEY = "birthdayViniDream";
+if (viniDreamInput) {
+  try {
+    viniDreamInput.value = localStorage.getItem(VINI_DREAM_KEY) || "";
+  } catch (error) {
+    viniDreamStatus.textContent = "Penyimpanan lokal tidak tersedia di browser ini.";
+  }
+  viniDreamInput.addEventListener("input", () => {
+    try {
+      localStorage.setItem(VINI_DREAM_KEY, viniDreamInput.value);
+      viniDreamStatus.textContent = "Impian Vini tersimpan ♡";
+    } catch (error) {
+      viniDreamStatus.textContent = "Tidak bisa menyimpan otomatis di browser ini.";
+    }
+  });
+}
+
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPjnE_vHBe2isyEJ53sDgqKzah4KGz7hferKHhD-lA9QbcQ3lDrEV3IFcLC7-mPHDVTA/exec";
+
+const sendDreamButton =
+  document.getElementById("sendViniDream");
+
+sendDreamButton.addEventListener("click", async () => {
+  const dream = viniDreamInput.value.trim();
+
+  if (!dream) {
+    viniDreamStatus.textContent =
+      "Tulis impianmu dulu ya ♡";
+    return;
+  }
+
+  sendDreamButton.disabled = true;
+  sendDreamButton.textContent = "Mengirim...";
+
+  try {
+    await fetch(SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify({ dream }),
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8"
+      }
+    });
+
+    viniDreamStatus.textContent =
+      "Impian berhasil dikirim ♡";
+
+    viniDreamInput.value = "";
+    localStorage.removeItem("birthdayViniDream");
+
+  } catch (error) {
+    viniDreamStatus.textContent =
+      "Belum berhasil mengirim. Coba lagi ya.";
+  }
+
+  sendDreamButton.disabled = false;
+  sendDreamButton.textContent = "Kirim Impian ♡";
 });
